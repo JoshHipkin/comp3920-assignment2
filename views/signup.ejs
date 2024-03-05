@@ -1,0 +1,42 @@
+<%- include ('templates/header.ejs') %>
+<div class="container vh-100">
+    <div class="row justify-content-center align-items-center h-50">
+        <div class="col col-sm-6 col-md-4">
+            <form class="form-signup" action="/signingup" method="post">
+                <div class="text-center mb-4">
+                    <img class="mb-4" src="https://getbootstrap.com/docs/4.0/assets/brand/bootstrap-solid.svg" alt="" width="72" height="72">
+                    <h1 class="h3 mb-3 font-weight-normal">Please sign up</h1>
+                </div>
+                
+                <div class="form-label-group">
+                    <label for="inputEmail" class="sr-only">Email address</label>
+                    <input type="email" name="email" id="inputEmail" class="form-control" placeholder="Email address">
+                </div>
+
+                <div class="form-label-group">
+                    <label for="inputUsername" class="sr-only">Username</label>
+                    <input type="text" name="username" id="inputUsername" class="form-control" placeholder="Username">
+                
+                <div class="form-label-group">
+                    <label for="inputPassword" class="sr-only">Password</label>
+                    <input type="password" name="password" id="inputPassword" class="form-control" placeholder="Password">
+                </div>
+
+                <div class="form-label-group">
+                    <label for="inputPassword" class="sr-only">Confirm Password</label>
+                    <input type="password" id="inputPassword" class="form-control" placeholder="Confirm Password" >
+
+                <button class="btn btn-primary mt-2 btn-block" type="submit">Sign up</button>
+            </form>
+            <% if (missing) { %>
+                <div class="alert alert-danger mt-2" role="alert">
+                    Please fill in all fields
+                </div> <% } %>
+                <% if (exists) { %>
+                    <div class="alert alert-danger mt-2" role="alert">
+                        That username or email already exists, please try again
+                    </div> <% } %>
+        </div>
+    </div>
+</div>
+<%- include ('templates/footer.ejs') %>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+<style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #091540; /* Dark blue background */
+      color: #fff; /* White text color */
+      text-align: center;
+    }
+  
+    .container {
+      max-width: 600px;
+      padding: 20px;
+    }
+  
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+  
+    p {
+      margin-bottom: 20px;
+    }
+  
+    .button {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #f8e71c; /* Yellow background for the button */
+      color: #091540; /* Dark blue text for the button */
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+  
+    .button:hover {
+      background-color: #f7d700; /* Slightly darker yellow on hover */
+    }
+  
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+  </head>
+  <body>
+  
+  <div class="container">
+    <img src="robot.webp" alt="Confused Robot" />
+    <h1>Oops!</h1>
+    <p>We can't seem to find the page you're looking for.</p>
+    <a href="/" class="button">Take Me Home</a>
+  </div>
+<%- include ('templates/footer.ejs') %>
