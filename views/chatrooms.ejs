@@ -1,0 +1,15 @@
+<%- include ('templates/header.ejs') %>
+<div class="container mt-5">
+    <a href="/createRoom" class="btn btn-success mb-3">Create New Room</a>
+    <h2>Chat Rooms:</h2>
+    <div class="list-group">
+        <% rooms.forEach(function(room) { %>
+            <a href="/room/<%= room.name %>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <%= room.name %>
+                <% if (room.hasUnreadMessages) { %>
+                    <span class="unread-indicator">unread messages</span>
+                <% } %>
+            </a>
+        <% }); %>
+    </div>
+</div>

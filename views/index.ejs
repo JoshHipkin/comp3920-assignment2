@@ -1,2 +1,26 @@
 <%- include ('templates/header.ejs') %>
+<style>
+
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-y: hidden;
+    }
+.floating-box {
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.floating-box {
+    z-index: 1050; /* Bootstrap's modal overlay starts at 1040 */
+}
+</style>
+<div class="d-flex justify-content-center align-items-center" style = "min-height: 80vh;">
+    <div class="floating-box text-center">
+        <button class="btn btn-primary m-2" onclick="location.href='/createRoom'">Create a Group</button>
+        <button class="btn btn-primary m-2" onclick="location.href='/chatRooms'">Go to Chat Rooms</button>
+    </div>
+</div>
 <%- include ('templates/footer.ejs') %>

@@ -1,0 +1,40 @@
+<%- include ('templates/header.ejs') %>
+<style>
+    .users-checklist {
+        /* Inset look with a border and some padding */
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        padding: 10px;
+        /* Fixed height and scrollable */
+        height: 150px; /* Adjust based on your needs */
+        overflow-y: auto;
+    }
+</style>
+
+
+<div class="container mt-5">
+    <h2>Create a New Chat Group</h2>
+    <form action="/createRoom" method="POST">
+        <div class="form-group">
+            <label for="roomName">Room Name</label>
+            <input type="text" class="form-control" id="roomName" name="roomName" required>
+        </div>
+
+        <div class="form-group">
+            <h4>Select Users to Add:</h4>
+            <div class="users-checklist">
+                <% users.forEach(function(user) { %>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="selectedUsers" value="<%= user.user_id %>" id="user<%= user.id %>">
+                        <label class="form-check-label" for="user<%= user.id %>">
+                            <%= user.username %>
+                        </label>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+        
+
+        <button type="submit" class="btn btn-primary mt-3">Create Group</button>
+    </form>
+</div>
