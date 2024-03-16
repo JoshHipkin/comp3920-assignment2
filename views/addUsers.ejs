@@ -1,0 +1,29 @@
+<%- include ('templates/header.ejs') %>
+<div class="container mt-5">
+    <h2>Manage Room Users</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Users Not in Room</h3>
+            <form action="/addUsers/<%= roomId %>" method="POST">
+                <% usersNotInRoom.forEach(function(user) { %>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="selectedUsers" value="<%= user.user_id %>">
+                        <label class="form-check-label">
+                            <%= user.username %>
+                        </label>
+                    </div>
+                <% }); %>
+                <button type="submit" class="btn btn-primary mt-2">Add Selected Users</button>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <h3>Users in Room</h3>
+            <ul>
+                <% usersInRoom.forEach(function(user) { %>
+                    <li><%= user.username %></li>
+                <% }); %>
+            </ul>
+        </div>
+    </div>
+</div>
+<%- include ('templates/footer.ejs') %>

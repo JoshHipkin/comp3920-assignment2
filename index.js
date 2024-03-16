@@ -10,7 +10,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const { rmSync } = require("fs");
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 3002;
 
 const expireTime = 1 * 60 * 60 * 1000; // 1 hour
 
@@ -51,6 +51,29 @@ if (mongoStore) {
     }));
 }
 
+const roomQueries = require('./database/rooms.js');
+
+async function roomAuthorization(req, res, next) {
+    const authorized = require('./database/rooms.js');
+    const belong = await authorized.authorizeUser(req.session.user_id, req.params.roomId);
+    if (!belong) {
+        console.log("User not authorized");
+        res.status(403);
+        res.redirect('/chatrooms');
+    } else {
+        next();
+    }
+}
+
+function authorized(req, res, next) { 
+    if (req.session.authenticated) {
+        next();
+    }
+    else {
+        res.redirect('/login');
+    }
+}
+
 function ensureUserAvailable(req, res, next) {
     if (req.session.authenticated) {
         res.locals.username = req.session.username;
@@ -71,6 +94,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+    if (req.session.authenticated) {
+        res.redirect('/chatrooms');
+        return;
+    }
     const error = req.query.error;
     res.render('login', { error});
 });
@@ -81,7 +108,6 @@ app.post('/logingin', async (req, res) => {
 
     const findUser = require('./database/findUser.js');
     const results = await findUser.findUsers(email, null);
-    console.log(results)
     if (results.length == 0) {
         res.redirect('/login?error=true');
         return;
@@ -106,6 +132,10 @@ app.post('/logingin', async (req, res) => {
 });
 
 app.get('/signup', (req, res) => {
+    if (req.session.authenticated) {
+        res.redirect('/chatrooms');
+        return;
+    }
     const missing = req.query.missing;
     const error = req.query.error;
     const exists = req.query.exists;
@@ -121,7 +151,7 @@ app.post('/signingup', async (req, res) => {
     const createUser = require('./database/createUser');
     const findUsers = require('./database/findUser.js');
     try {
-        const userExists = await findUsers(email, username);
+        const userExists = await findUsers.findUsers(email, username);
         if (userExists && userExists.length > 0) {
             res.redirect('/signup?exists=true');
             return;
@@ -154,26 +184,21 @@ app.get('/deleteUsers', (req, res) => {
     res.send("Users deleted");
 });
 
-app.get('/chatrooms', async (req, res) => {
-    const findRooms = require('./database/createRoom');
+app.get('/chatrooms', authorized, async (req, res) => {
+    const findRooms = require('./database/rooms.js');
     const rooms = await findRooms.findRooms(req.session.user_id);
-    console.log(rooms);
     res.render('chatrooms', { rooms: rooms });
 });
 
-app.get('/room', (req, res) => {
-    res.render('room');
-});
-
-app.get('/createRoom', async (req, res) => {
+app.get('/createRoom', authorized, async (req, res) => {
     const findAllUsers = require('./database/findUser.js');
     const users = await findAllUsers.findAllUsers(req.session.user_id);
+    console.log(users)
     res.render('createRoom', { users: users });
 });
 
 app.post('/createRoom', async (req, res) => {
-    const createRoom = require('./database/createRoom');
-    console.log(req.body);
+    const createRoom = require('./database/rooms.js');
     let{ roomName, selectedUsers } = req.body;
     selectedUsers = Array.isArray(selectedUsers) ? selectedUsers : selectedUsers ? [selectedUsers] : [];
     selectedUsers.push(req.session.user_id);
@@ -192,11 +217,45 @@ app.post('/createRoom', async (req, res) => {
     }
 });
 
-app.get('/room/:roomId', async (req, res) => {
+app.get('/room/:roomId', authorized, roomAuthorization, async (req, res) => {
     const roomId = req.params.roomId;
-    const findRoom = require('./database/createRoom');
-    const room = await findRoom.findRoom(roomId);
-    res.render('room', { room: room });
+    const messages = await roomQueries.getMessages(roomId);
+    const roomName = await roomQueries.getRoomName(roomId);
+    const lastReadMessage = await roomQueries.getLastReadMessage(roomId, req.session.user_id);
+    await roomQueries.updateLastReadMessage(roomId, req.session.user_id);
+    res.render('room', { messages : messages, currentUserId : req.session.user_id , roomName: roomName[0].name, 
+        roomId: roomId, lastReadMessageId : lastReadMessage[0].last_read_message_id});
+});
+
+app.post('/room/:roomId', authorized, roomAuthorization, async (req, res) => {
+    const roomId = req.params.roomId;
+    const message = req.body.message;
+    const roomUserId = await roomQueries.getRoomUserId(roomId, req.session.user_id);
+    await roomQueries.sendMessage(roomUserId[0].room_user_id, message);
+    await roomQueries.updateLastReadMessage(roomId, req.session.user_id);
+    res.redirect(`/room/${roomId}`);
+});
+
+app.get('/addUsers/:roomId', authorized, roomAuthorization, async (req, res) => {
+    const roomId = req.params.roomId;
+    const findAllUsers = require('./database/findUser.js');
+    const usersInRoom = await findAllUsers.findUsersInRoom(roomId);
+    const usersNotInRoom = await findAllUsers.findUsersNotInRoom(roomId);
+    res.render('addUsers', { usersNotInRoom : usersNotInRoom, usersInRoom : usersInRoom, roomId: roomId });
+});
+
+app.post('/addUsers/:roomId', authorized, roomAuthorization, async (req, res) => {
+    const roomId = req.params.roomId;
+    let selectedUsers = req.body.selectedUsers;
+    selectedUsers = Array.isArray(selectedUsers) ? selectedUsers : selectedUsers ? [selectedUsers] : [];
+    const addUsersToRoom = require('./database/rooms.js');
+    try {
+        await addUsersToRoom.addUsersToRoom(roomId, selectedUsers);
+        res.redirect(`/room/${roomId}`);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server error while adding users to group');
+    }
 });
 
 

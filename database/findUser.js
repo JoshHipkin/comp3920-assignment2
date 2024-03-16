@@ -24,5 +24,29 @@ async function findAllUsers(currentUserId) {
     }
 }
 
+async function findUsersInRoom(roomId) {
+    let query = `SELECT user_id, username FROM user JOIN room_user 
+    USING (user_id) WHERE room_id = ?;`;
+    try {
+        const results = await database.query(query, [roomId]);
+        return results[0];
+} catch (e) {
+    console.error(e);
+    return false;
+    }
+}
 
-module.exports = {findUsers, findAllUsers};
+async function findUsersNotInRoom(roomId) {
+    let query = `SELECT user_id, username FROM user 
+    WHERE user_id NOT IN (SELECT user_id FROM room_user WHERE room_id = ?);`;
+    try {
+        const results = await database.query(query, [roomId]);
+        return results[0];
+} catch (e) {
+    console.error(e);
+    return false;
+    }
+}
+
+
+module.exports = {findUsers, findAllUsers, findUsersInRoom, findUsersNotInRoom};

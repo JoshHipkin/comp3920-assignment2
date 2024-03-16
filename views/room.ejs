@@ -1,2 +1,44 @@
 <%- include ('templates/header.ejs') %>
+<style>
+  .unread-indicator {
+    border-top: 2px solid red;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+</style>
+<div class="container mt-5">
+    <h2><%= roomName %></h2>
+    <!-- Add User Button -->
+<button type="button" class="btn btn-info mb-3" onclick="location.href='/addUsers/<%= roomId %>'">Add Users</button>
+
+
+
+    <div id="messageWindow" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+        <% messages.forEach(function(message, index) { %>
+            <div class="<%= message.user_id === currentUserId ? 'text-right' : '' %> mb-2">
+              
+                <% if(message.user_id === currentUserId) { %>
+                    <div class="text-muted" style="font-size: 0.8em;"><%= message.sent_time %></div>
+                    <strong>You:</strong>
+                <% } else { %>
+                    <strong><%= message.username %>:</strong>
+                <% } %>
+                <span><%= message.text %></span>
+            </div>
+            <% if(lastReadMessageId == message.message_id && index < messages.length - 1) { %>
+              <div class="text-muted unread-indicator">
+                <span class="badge bg-secondary">unread</span>
+              </div>
+            <% } %>
+        <% }); %>
+    </div>
+    
+    <form action="/room/<%= roomId %>" method="POST" class="form-inline">
+        <input type="hidden" name="roomId" value="<%= roomId %>">
+        <div class="form-group mx-sm-3 mb-2">
+            <input type="text" class="form-control" id="messageText" name="message" placeholder="Type a message..." required>
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Send</button>
+    </form>
+</div>
 <%- include ('templates/footer.ejs') %>
