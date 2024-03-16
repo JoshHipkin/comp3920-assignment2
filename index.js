@@ -8,7 +8,6 @@ require('dotenv').config();
 const path = require('path');
 
 const bodyParser = require('body-parser');
-const { rmSync } = require("fs");
 const app = express();
 const port = process.env.PORT || 3002;
 
@@ -17,7 +16,7 @@ const expireTime = 1 * 60 * 60 * 1000; // 1 hour
 app.set('view engine', 'ejs');
 app.use(express.urlencoded({ extended: false }));
 app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use(express.static(path.join(__dirname, "public")));
 
 const mongodb_host = process.env.MONGODB_HOST;
 const mongodb_user = process.env.MONGODB_USER;
@@ -87,6 +86,11 @@ function ensureUserAvailable(req, res, next) {
     next();
 }
 
+function validatePassword(password) {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,}$/;
+    return regex.test(password);
+}
+
 app.use(ensureUserAvailable);
 
 app.get('/', (req, res) => {
@@ -139,7 +143,8 @@ app.get('/signup', (req, res) => {
     const missing = req.query.missing;
     const error = req.query.error;
     const exists = req.query.exists;
-    res.render('signup', { missing, error, exists });
+    const password = req.query.pass;
+    res.render('signup', { missing, error, exists, password });
 });
 
 app.post('/signingup', async (req, res) => {
@@ -148,6 +153,7 @@ app.post('/signingup', async (req, res) => {
     if (!username || !email || !password) {
         res.redirect('/signup?missing=true');
     }
+    if (validatePassword(password)) {
     const createUser = require('./database/createUser');
     const findUsers = require('./database/findUser.js');
     try {
@@ -167,6 +173,9 @@ app.post('/signingup', async (req, res) => {
         console.error(e);
         res.redirect('/signup?error=true');
     }
+} else {
+    res.redirect('/signup?pass=true');
+}
 });
 
 app.get('/signupsuccess', (req, res) => {
@@ -185,15 +194,21 @@ app.get('/deleteUsers', (req, res) => {
 });
 
 app.get('/chatrooms', authorized, async (req, res) => {
-    const findRooms = require('./database/rooms.js');
-    const rooms = await findRooms.findRooms(req.session.user_id);
+    const rooms = await roomQueries.getRooms(req.session.user_id);
+    for (const room of rooms) {
+        const unreadMessages = await roomQueries.getUnreadMessages(room.room_user_id);
+        const recentMessageTime = await roomQueries.getRecentMessageTime(room.room_user_id);
+        room.unreadMessages = unreadMessages[0].count;
+        room.recentMessageTime = recentMessageTime[0].sent_datetime;
+    }
+    console.log(rooms);
+
     res.render('chatrooms', { rooms: rooms });
 });
 
 app.get('/createRoom', authorized, async (req, res) => {
     const findAllUsers = require('./database/findUser.js');
     const users = await findAllUsers.findAllUsers(req.session.user_id);
-    console.log(users)
     res.render('createRoom', { users: users });
 });
 
@@ -217,15 +232,55 @@ app.post('/createRoom', async (req, res) => {
     }
 });
 
+const getTimeDifference = (sentTime, now) => {
+    const diffTime = Math.abs(now - sentTime);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.ceil(diffTime / (1000 * 60));
+
+    if (diffDays > 1) {
+        return sentTime.toLocaleDateString();
+    } else if (diffHours > 1) {
+        return `${diffHours} hours ago`;
+    } else if (diffMinutes > 1) {
+        return `${diffMinutes} minutes ago`;
+    } else {
+        return `Just now`;
+    }
+};
+
 app.get('/room/:roomId', authorized, roomAuthorization, async (req, res) => {
-    const roomId = req.params.roomId;
-    const messages = await roomQueries.getMessages(roomId);
-    const roomName = await roomQueries.getRoomName(roomId);
-    const lastReadMessage = await roomQueries.getLastReadMessage(roomId, req.session.user_id);
-    await roomQueries.updateLastReadMessage(roomId, req.session.user_id);
-    res.render('room', { messages : messages, currentUserId : req.session.user_id , roomName: roomName[0].name, 
-        roomId: roomId, lastReadMessageId : lastReadMessage[0].last_read_message_id});
+    try {
+        const roomId = req.params.roomId;
+        const now = new Date();
+
+        const [messages, roomName, lastReadMessage, emojis] = await Promise.all([
+            roomQueries.getMessages(roomId),
+            roomQueries.getRoomName(roomId),
+            roomQueries.getLastReadMessage(roomId, req.session.user_id),
+            roomQueries.getEmojis()
+        ]);
+        await roomQueries.updateLastReadMessage(roomId, req.session.user_id);
+
+        for (const message of messages) {
+            message.relativeTime = getTimeDifference(new Date(message.sent_datetime), now);
+            message.emojis = await roomQueries.getMessageEmojis(message.message_id);
+        }
+
+        res.render('room', {
+            messages: messages,
+            currentUserId: req.session.user_id,
+            roomName: roomName[0]?.name,
+            roomId: roomId,
+            lastReadMessageId: lastReadMessage[0]?.last_read_message_id,
+            emojis: emojis
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error loading the chat room');
+    }
 });
+
 
 app.post('/room/:roomId', authorized, roomAuthorization, async (req, res) => {
     const roomId = req.params.roomId;
@@ -248,6 +303,10 @@ app.post('/addUsers/:roomId', authorized, roomAuthorization, async (req, res) =>
     const roomId = req.params.roomId;
     let selectedUsers = req.body.selectedUsers;
     selectedUsers = Array.isArray(selectedUsers) ? selectedUsers : selectedUsers ? [selectedUsers] : [];
+    if (selectedUsers.length == 0) {
+        res.redirect(`/room/${roomId}`);
+        return;
+    }
     const addUsersToRoom = require('./database/rooms.js');
     try {
         await addUsersToRoom.addUsersToRoom(roomId, selectedUsers);
@@ -258,8 +317,21 @@ app.post('/addUsers/:roomId', authorized, roomAuthorization, async (req, res) =>
     }
 });
 
+app.post('/room/:roomId/addEmoji', authorized, roomAuthorization, async (req, res) => {
+    const roomId = req.params.roomId;
+    const { messageId, emojiId } = req.body;
+    const userId = req.session.user_id;
+    
+    try {
+        await roomQueries.addEmojisToMessage(messageId, emojiId, userId);
+        res.redirect(`/room/${roomId}`);
+    } catch (e) {
+        console.error(e);
+    }
+});
 
-app.use(express.static(path.join(__dirname, "/public")));
+
+
 app.get('*', (req, res) => {
     res.status(404);
     res.render('404');

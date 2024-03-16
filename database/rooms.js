@@ -15,11 +15,39 @@ async function addUsersToRoom(roomId, selectedUsers) {
     await database.query(query, [].concat(...values));
 }
 
-async function findRooms(userId) {
-    const query = `SELECT r.room_id, name FROM room_user ru JOIN room r USING (room_id) WHERE user_id = ?`;
-    const results= await database.query(query, [userId]);
+async function getRooms(userId) {
+    // Fetch the list of rooms the user is part of along with the last read message ID.
+    const rooms = await database.query(`
+        SELECT 
+            r.room_id, 
+            r.name,
+            ru.last_read_message_id,
+            ru.room_user_id
+        FROM 
+            room r
+        LEFT JOIN 
+            room_user ru USING(room_id) 
+            WHERE ru.user_id = ?`, 
+        [userId]
+    );
+    return rooms[0];
+}
+
+async function getUnreadMessages(room_user_id) {
+    const query = `
+    SELECT COUNT(*) AS count
+    FROM message
+    WHERE room_user_id = ? AND message_id > (SELECT last_read_message_id FROM room_user WHERE room_user_id = ?)`;
+    const results = await database.query(query, [room_user_id, room_user_id]);
     return results[0];
 }
+
+async function getRecentMessageTime(room_user_id) {
+    const query = `SELECT sent_datetime FROM message WHERE room_user_id = ? ORDER BY sent_datetime DESC LIMIT 1;`;
+    const results = await database.query(query, [room_user_id]);
+    return results[0];
+}
+ 
 
 async function authorizeUser(userId, roomId) {
     const query = `SELECT user_id FROM room_user WHERE user_id = ? AND room_id = ?`;
@@ -76,7 +104,29 @@ async function getLastReadMessage(roomId, userId) {
     return results[0];
 }
 
+async function getEmojis() {
+    const query = `SELECT * FROM emoji;`;
+    const results = await database.query(query);
+    return results[0];
+}
 
-module.exports = {createRoom, addUsersToRoom, findRooms,
-     authorizeUser, getMessages, getRoomName, sendMessage,
-      updateLastReadMessage, getRoomUserId, getLastReadMessage};
+async function getMessageEmojis(message_id) {
+    const query = `SELECT name, image, COUNT(*) AS count FROM emoji_message join emoji USING(emoji_id) WHERE message_id = ? 
+    GROUP BY name, image;`;
+    const results = await database.query(query, [message_id]);
+    return results[0];
+
+}
+
+async function addEmojisToMessage(message_id, emoji_id, user_id) {
+    const query = `INSERT INTO emoji_message (message_id, emoji_id, user_id) VALUES (?, ?, ?);`;
+    const values = [message_id, emoji_id, user_id];
+    await database.query(query, values);
+}
+
+
+
+module.exports = {createRoom, addUsersToRoom, 
+    getRooms, getUnreadMessages, getRecentMessageTime, authorizeUser, getMessages, getRoomName, sendMessage,
+      updateLastReadMessage, getRoomUserId, getLastReadMessage, 
+      getEmojis, getMessageEmojis, addEmojisToMessage};

@@ -5,26 +5,68 @@
     margin-top: 10px;
     margin-bottom: 10px;
   }
+  .message-meta {
+    font-size: 0.8em;
+    color: #6c757d; /* Bootstrap's text-muted color */
+  }
+  .emoji {
+    width: 1.5em;
+    height: 1.5em;
+    vertical-align: middle;
+    margin-right: 0.5em;
+  }
+  .emoji-selectable {
+    width: 4em;
+    height: 4em;
+    text-align: center;
+  }
 </style>
 <div class="container mt-5">
     <h2><%= roomName %></h2>
     <!-- Add User Button -->
-<button type="button" class="btn btn-info mb-3" onclick="location.href='/addUsers/<%= roomId %>'">Add Users</button>
+    <button type="button" class="btn btn-info mb-3" onclick="location.href='/addUsers/<%= roomId %>'">Add Users</button>
 
-
-
-    <div id="messageWindow" class="border rounded p-3 mb-3" style="height: 400px; overflow-y: auto;">
+    <div id="messageWindow" class="border rounded p-3 mb-3" style="height: 55rem; overflow-y: auto;">
         <% messages.forEach(function(message, index) { %>
-            <div class="<%= message.user_id === currentUserId ? 'text-right' : '' %> mb-2">
-              
+            <div class="<%= message.user_id === currentUserId ? 'text-end' : '' %> mb-2">
+                <div class="message-meta"><%= message.relativeTime %></div>
                 <% if(message.user_id === currentUserId) { %>
-                    <div class="text-muted" style="font-size: 0.8em;"><%= message.sent_time %></div>
                     <strong>You:</strong>
                 <% } else { %>
                     <strong><%= message.username %>:</strong>
                 <% } %>
-                <span><%= message.text %></span>
+                <div><%= message.text %></div>
+                <% message.emojis.forEach(function(emoji) { %>
+                    <img src="/<%= emoji.image %>" alt="<%= emoji.name %>" class="emoji">
+                <% }); %>
+              <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#emojiModal<%= message.message_id %>">
+                <i class="bi bi-plus"></i>
+              </button>
+              <!-- modal -->
+              <div class="modal fade" id="emojiModal<%=message.message_id%>" tabindex="-1" aria-labelledby="emojiModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="emojiModalLabel">Add an Emoji</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body d-flex flex-wrap">
+                      <% emojis.forEach(function(emoji) { %>
+                        <form action="/room/<%= roomId %>/addEmoji" method="POST" class="m-1">
+                          <input type="hidden" name="messageId" value="<%= message.message_id %>">
+                          <input type="hidden" name="emojiId" value="<%= emoji.emoji_id %>">
+                          <button type="submit" class="btn" aria-label="Add emoji <%= emoji.name %>">
+                            <img src="/<%= emoji.image %>" alt="<%= emoji.name %>" class="emoji">
+                          </button>
+                        </form>
+                      <% }); %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- modal -->
             </div>
+            
             <% if(lastReadMessageId == message.message_id && index < messages.length - 1) { %>
               <div class="text-muted unread-indicator">
                 <span class="badge bg-secondary">unread</span>
@@ -41,4 +83,5 @@
         <button type="submit" class="btn btn-primary mb-2">Send</button>
     </form>
 </div>
+
 <%- include ('templates/footer.ejs') %>

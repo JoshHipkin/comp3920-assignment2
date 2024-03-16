@@ -4,12 +4,19 @@
     <h2>Chat Rooms:</h2>
     <div class="list-group">
         <% rooms.forEach(function(room) { %>
-            <a href="/room/<%= room.room_id %>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <%= room.name %>
-                <% if (room.hasUnreadMessages) { %>
-                    <span class="unread-indicator">unread messages</span>
+            <a href="/room/<%= room.room_id %>" class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="mb-1"><%= room.name %></h5>
+                    <% if (room.recentMessageTime) { %>
+                        <small>Last message: <%= room.recentMessageTime %></small>
+                    <% } %>
+                </div>
+                <% if (room.unreadMessages && room.unreadMessages > 0) { %>
+                    <span class="badge bg-primary rounded-pill"><%= room.unreadMessages %> unread</span>
                 <% } %>
             </a>
         <% }); %>
     </div>
 </div>
+<%- include ('templates/footer.ejs') %>
+

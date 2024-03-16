@@ -36,6 +36,10 @@
                     <div class="alert alert-danger mt-2" role="alert">
                         That username or email already exists, please try again
                     </div> <% } %>
+                    <% if (password) { %>
+                        <div class="alert alert-danger mt-2" role="alert">
+                            password must be 10 characters long and contain at least one: uppercase letter, lowercase letter, number, and special character.
+                        </div> <% } %>
         </div>
     </div>
 </div>
