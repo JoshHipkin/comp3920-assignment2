@@ -196,7 +196,7 @@ app.get('/deleteUsers', (req, res) => {
 app.get('/chatrooms', authorized, async (req, res) => {
     const rooms = await roomQueries.getRooms(req.session.user_id);
     for (const room of rooms) {
-        const unreadMessages = await roomQueries.getUnreadMessages(room.room_user_id);
+        const unreadMessages = await roomQueries.getUnreadMessages(room.room_id, room.room_user_id);
         const recentMessageTime = await roomQueries.getRecentMessageTime(room.room_user_id);
         room.unreadMessages = unreadMessages[0].count;
         room.recentMessageTime = recentMessageTime[0].sent_datetime;
