@@ -33,12 +33,13 @@ async function getRooms(userId) {
     return rooms[0];
 }
 
-async function getUnreadMessages(room_user_id) {
+async function getUnreadMessages(room_id, room_user_id) {
     const query = `
     SELECT COUNT(*) AS count
-    FROM message
-    WHERE room_user_id = ? AND message_id > (SELECT last_read_message_id FROM room_user WHERE room_user_id = ?)`;
-    const results = await database.query(query, [room_user_id, room_user_id]);
+    FROM message 
+    JOIN room_user ru USING (room_user_id)
+    WHERE ru.room_id = ? AND message_id > (SELECT last_read_message_id FROM room_user WHERE room_user_id = ?)`;
+    const results = await database.query(query, [room_id, room_user_id]);
     return results[0];
 }
 
