@@ -201,8 +201,8 @@ app.get('/chatrooms', authorized, async (req, res) => {
     for (const room of rooms) {
         const unreadMessages = await roomQueries.getUnreadMessages(room.room_id, room.room_user_id);
         const recentMessageTime = await roomQueries.getRecentMessageTime(room.room_id);
-        if (recentMessageTime != null && unreadMessages != null) {
         room.unreadMessages = unreadMessages[0].count;
+        if (recentMessageTime[0]) {
         room.recentMessageTime = recentMessageTime[0].sent_datetime;
         }
     }
