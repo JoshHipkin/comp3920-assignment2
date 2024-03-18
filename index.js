@@ -154,7 +154,7 @@ app.post('/signingup', async (req, res) => {
     if (!username || !email || !password) {
         res.redirect('/signup?missing=true');
     }
-    if (true) {
+    if (validatePassword(password)) {
     const createUser = require('./database/createUser');
     const findUsers = require('./database/findUser.js');
     try {
