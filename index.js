@@ -51,6 +51,7 @@ if (mongoStore) {
 }
 
 const roomQueries = require('./database/rooms.js');
+const database = require("./databaseConnection.js");
 
 async function roomAuthorization(req, res, next) {
     const authorized = require('./database/rooms.js');
@@ -153,7 +154,7 @@ app.post('/signingup', async (req, res) => {
     if (!username || !email || !password) {
         res.redirect('/signup?missing=true');
     }
-    if (validatePassword(password)) {
+    if (true) {
     const createUser = require('./database/createUser');
     const findUsers = require('./database/findUser.js');
     try {
@@ -165,6 +166,7 @@ app.post('/signingup', async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, saltRounds);
         const user = await createUser(email, username, hashedPassword);
         req.session.authenticated = true;
+        req.session.user_id = user;
         req.session.username = username;
         req.session.email = email;
         req.session.cookie.maxAge = expireTime;
@@ -195,14 +197,15 @@ app.get('/deleteUsers', (req, res) => {
 
 app.get('/chatrooms', authorized, async (req, res) => {
     const rooms = await roomQueries.getRooms(req.session.user_id);
+
     for (const room of rooms) {
         const unreadMessages = await roomQueries.getUnreadMessages(room.room_id, room.room_user_id);
-        const recentMessageTime = await roomQueries.getRecentMessageTime(room.room_user_id);
+        const recentMessageTime = await roomQueries.getRecentMessageTime(room.room_id);
+        if (recentMessageTime != null && unreadMessages != null) {
         room.unreadMessages = unreadMessages[0].count;
         room.recentMessageTime = recentMessageTime[0].sent_datetime;
+        }
     }
-    console.log(rooms);
-
     res.render('chatrooms', { rooms: rooms });
 });
 
@@ -217,16 +220,20 @@ app.post('/createRoom', async (req, res) => {
     let{ roomName, selectedUsers } = req.body;
     selectedUsers = Array.isArray(selectedUsers) ? selectedUsers : selectedUsers ? [selectedUsers] : [];
     selectedUsers.push(req.session.user_id);
+    console.log(selectedUsers);
 
     try {
+        const database = include('databaseConnection');
+        await database.query('START TRANSACTION');
         const roomId = await createRoom.createRoom(roomName);
 
         if (selectedUsers && selectedUsers.length) {
             await createRoom.addUsersToRoom(roomId, selectedUsers);
         }
-
+        await database.query('COMMIT');
         res.redirect('/chatRooms');
     } catch (error) {
+        database.query('ROLLBACK');
         console.error(error)
         res.status(500).send('Server error while creating group');
     }
