@@ -37,7 +37,10 @@
                 <% } %>
                 <div><%= message.text %></div>
                 <% message.emojis.forEach(function(emoji) { %>
+                  <div class="d-inline-block border rounded p-1">
                     <img src="/<%= emoji.image %>" alt="<%= emoji.name %>" class="emoji">
+                    <%= emoji.count %>
+                  </div>
                 <% }); %>
               <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#emojiModal<%= message.message_id %>">
                 <i class="bi bi-plus"></i>
